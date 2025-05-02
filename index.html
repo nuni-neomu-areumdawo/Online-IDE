@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Online Code IDE</title>
+<link rel="icon" type="./static/favicon.ico" href="./static/favicon.ico">
+<!-- CodeMirror CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: #0d0d0d;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .bokeh-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        overflow: hidden;
+    }
+
+    .bokeh-element {
+        position: absolute;
+        border-radius: 50%;
+        transition: opacity 0.7s ease-in-out, transform 0.7s ease-in-out;
+    }
+
+    .container {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        height: 100vh;
+        padding: 20px;
+        gap: 20px;
+        box-sizing: border-box;
+    }
+
+    .ide-panel {
+        flex: 2;
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 16px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        height: calc(100vh - 40px);
+        position: relative;
+    }
+
+    .editor {
+        flex: 1;
+        width: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        line-height: 1.5;
+        padding: 10px;
+        border-radius: 8px;
+        height: calc(100% - 250px);
+        overflow: auto;
+    }
+    .controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+
+.control-button {
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        font-size: 14px;
+    }
+    .control-button:hover {
+        opacity: 0.9;
+    }
+    /* Specific Button Colors */
+    #toggle-all, #toggle-hints, #toggle-errors, #next-issue, #toggle-history-panel {
+        background-color: #6c757d; /* Gray - Toggle Buttons */
+    }
+    #toggle-all:hover, #toggle-hints:hover, #toggle-errors:hover, #next-issue:hover, #toggle-history-panel:hover {
+        background-color: #5a6268;
+    }
+
+    #view-src {
+        background-color: #553d5a; /* Gray - Toggle Buttons */
+    }
+    #view-src:hover {
+        background-color: #683c5f;
+    }
+
+    #save-button {
+        background-color: #ffc107; /* Yellow/Amber - Save Button */
+        color: #212529; /* Dark text for contrast on yellow */
+    }
+    #save-button:hover {
+        background-color: #e0a800;
+    }
+
+    #run-button {
+        align-self: flex-end;
+        background: #4CAF50; /* Green - Run Button */
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        font-size: 14px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    #run-button:hover {
+        background: #388E3C;
+    }
+
+    .output-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        height: calc(100vh - 40px);
+    }
+
+    #hints-panel {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(0, 0, 0, 0.4);
+        border-radius: 16px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+        overflow-y: auto;
+    }
+    #hints-panel h2 {
+        margin-top: 0;
+        font-size: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+    }
+
+    #output-content {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 16px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+        overflow: auto;
+    }
+    #output-content h2 {
+        margin-top: 0;
+        font-size: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+        position: relative;
+    }
+
+    .hint-item {
+        background: rgba(38, 79, 120, 0.7);
+        color: #cceeff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 4px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        backdrop-filter: blur(5px);
+
+    }
+    .hint-item:hover {
+        background-color: rgba(38, 79, 120, 0.9);
+        box-shadow: 0 0 5px rgba(38, 79, 120, 0.9);
+    }
+
+    .warning-item {
+        background: rgba(244, 71, 71, 0.7);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 4px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        backdrop-filter: blur(5px);
+    }
+    .warning-item:hover{
+    background-color: rgba(244, 71, 71, 0.9);
+    box-shadow: 0 0 5px rgba(244, 71, 71, 0.9);
+    }
+
+    .highlight-line {
+        background-color: rgba(255, 255, 0, 0.3); /* Yellow highlight */
+        animation: highlight-fade 1.5s ease forwards;
+    }
+
+    @keyframes highlight-fade {
+        from { background-color: rgba(255, 255, 0, 0.3); }
+        to   { background-color: transparent; }
+    }
+    .highlight-line-blue {
+        background-color: rgba(0, 0, 255, 0.3); /* Blue highlight */
+        animation: highlight-fade-blue 2s ease forwards;
+    }
+    @keyframes highlight-fade-blue {
+        0% {
+            background-color: rgba(0, 0, 255, 0.3);
+        }
+        50% {
+        background-color: rgba(0, 0, 255, 0.15);
+        }
+        100%{
+            background-color: transparent;
+        }
+    }
+        .highlight-line-red {
+        background-color: rgba(255, 0, 0, 0.3); /* Red highlight */
+        animation: highlight-fade-red 2s ease forwards;
+
+    }
+    @keyframes highlight-fade-red {
+        0% {
+        background-color: rgba(255, 0, 0, 0.3);
+        }
+        50% {
+            background-color: rgba(255, 0, 0, 0.15);
+        }
+        100%{
+            background-color: transparent;
+
+        }
+
+    }
+
+
+    .CodeMirror {
+        background: transparent !important;
+        border-radius: 8px;
+        font-family: 'Consolas', 'Courier New', monospace;
+        height: 100%;
+
+    }
+    .CodeMirror-scroll {
+        background: transparent !important;
+        border-radius: 8px;
+        height: 100%;
+        overflow: auto !important;
+    }
+    .cm-s-material-darker.CodeMirror {
+    color: #d0d0d0;
+    }
+    .cm-s-material-darker span.cm-keyword { color: #C792EA; }
+    .cm-s-material-darker span.cm-def { color: #82AAFF; }
+    .cm-s-material-darker span.cm-string { color: #C3E88D; }
+    .cm-s-material-darker span.cm-number { color: #F78C6C; }
+    .cm-s-material-darker span.cm-operator { color: #89DDFF;}
+    .cm-s-material-darker span.cm-comment { color: #637777; font-style: italic;}
+    .cm-s-material-darker span.cm-variable { color: #f07178;}
+    .cm-s-material-darker .CodeMirror-cursor { border-left: 1px solid #f8f8f0; }
+    .cm-s-material-darker .CodeMirror-linenumber { color: #67828A; }
+
+    .cm-error-underline {
+    text-decoration: underline;
+    text-decoration-color: red;
+    text-decoration-style: wavy;
+    position: relative;
+    }
+
+
+    .cm-hint-underline {
+    text-decoration: underline;
+    text-decoration-color: #007acc;
+    text-decoration-style: wavy;
+    position: relative;
+    }
+
+
+    .hint-item:hover ~ .CodeMirror .cm-hint-underline[data-line="${'${line}'}"],
+    .warning-item:hover ~ .CodeMirror .cm-error-underline[data-line="${'${line}'}"]
+    {
+    text-shadow: 0 0 8px rgba(0, 122, 204, 0.8); /* Blue glow */
+    }
+    .warning-item:hover ~ .CodeMirror .cm-error-underline[data-line="${'${line}'}"] {
+        text-shadow: 0 0 8px rgba(255, 0, 0, 0.8);  /*red glow*/
+    }
+
+    .hide-hints .hint-item,
+    .hide-warnings .warning-item {
+        display: none;
+    }
+
+    .show-hints .cm-hint-underline {
+        display: inline;
+    }
+    .show-errors .cm-error-underline {
+        display: inline;
+    }
+
+
+    #language-select {
+        background: rgba(0, 0, 0, 0.5);
+        color: #e0e0e0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 14px;
+        backdrop-filter: blur(10px);
+        box-shadow: none;
+        cursor: pointer;
+        transition: border-color 0.3s ease;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+        background-repeat: no-repeat;
+        background-position-x: 95%;
+        background-position-y: center;
+        padding-right: 30px;
+    }
+
+    #language-select:hover,
+    #language-select:focus {
+        border-color: rgba(255, 255, 255, 0.5);
+        outline: none;
+    }
+
+    #language-select option {
+        background-color: #222;
+        color: #e0e0e0;
+    }
+
+
+    #editor-container {
+        transition: opacity 0.5s ease, text-shadow 0.5s ease;
+    }
+    .editor-fade-out-animation {
+        opacity: 0;
+    }
+    .editor-fade-in {
+        opacity: 1;
+        text-shadow: 0 0 15px rgba(0, 122, 204, 0.8);
+    }
+    .editor-no-glow {
+        text-shadow: none;
+    }
+
+    #notification-area {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        pointer-events: none;
+    }
+
+    .notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        max-width: 300px;
+        text-align: center;
+        border-radius: 12px;
+        backdrop-filter: blur(12px);
+        background: rgba(255, 255, 255, 0.1); 
+        color: white;
+        font-family: 'Arial', sans-serif;
+        box-shadow: 
+        inset 0 0 8px rgba(255, 255, 255, 0.1),
+        0 4px 8px rgba(0, 0, 0, 0.3),
+        0 8px 16px rgba(0, 0, 0, 0.2); 
+        z-index: 1000;
+        opacity: 0; 
+        transform: translateY(20px); 
+        transition: opacity 0.5s ease, transform 0.5s ease; 
+    }
+
+    .notification.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .notification.success {
+        border-left: 4px solid #4CAF50;
+        background: linear-gradient(
+        145deg,
+        rgba(0, 255, 0, 0.16),
+        rgba(0, 0, 0, 0.1)
+        );
+
+    }
+
+    .notification.info {
+        border-left: 4px solid #007acc;
+        background: linear-gradient(
+        145deg,
+        rgba(0, 128, 255, 0.16),
+        rgba(0, 0, 0, 0.1)
+        ); 
+    }
+
+    .notification.warning {
+        border-left: 4px solid #ffc107;
+        background: linear-gradient(
+        145deg,
+        rgba(255, 255, 0, 0.16),
+        rgba(0, 0, 0, 0.1)
+        ); 
+    }
+
+    .notification.error {
+        border-left: 4px solid #ff1100;
+        background: linear-gradient(
+        145deg,
+        rgba(255, 0, 0, 0.16),
+        rgba(0, 0, 0, 0.1)
+        );
+    }
+
+
+    #saved-code-panel {
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 0 0 16px 16px;
+        padding: 10px 15px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.8);
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        overflow-y: auto;
+        max-height: 200px;
+        font-size: 14px;
+        transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    #saved-code-panel.hide-panel {
+        max-height: 0;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+
+    #saved-code-panel h3 {
+        margin-top: 0;
+        font-size: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 3px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+    }
+    #saved-code-panel h3:hover {
+        opacity: 0.8;
+    }
+
+    .saved-code-iteration {
+        padding: 6px 8px;
+        margin-bottom: 6px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .saved-code-iteration:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .rename-dots, .delete-icon {
+        cursor: pointer;
+        margin-left: 8px;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+
+    .rename-dots:hover, .delete-icon:hover {
+        opacity: 1;
+    }
+</style>
+</head>
+
+<body>
+<div class="bokeh-container"></div>
+
+<div class="container">
+    <div class="ide-panel">
+    <div class="controls">
+            <select id="language-select" style="margin-right: 10px;">
+                <option value="python">Python</option>
+                <option value="java">Java</option>
+                <option value="c">C</option>
+                <option value="cpp">C++</option>
+            </select>
+            <button id="view-src" class = "control-button">View SRC</button>
+            <button id="toggle-all" class = "control-button">Toggle All</button>
+            <button id="toggle-hints" class = "control-button">Toggle Hints</button>
+            <button id="toggle-errors" class = "control-button">Toggle Errors</button>
+            <button id="next-issue" class = "control-button">Next Issue</button>
+            <button id="save-button" class="control-button">Save Code</button>
+            <button id="toggle-history-panel" class="control-button" disabled>Code History</button>
+            <button id="run-button">Run Code</button>
+        </div>
+    <h1 id="ide-title" style="margin-top:0; font-size:24px;">Online IDE</h1>
+    <div id="editor-container">
+        <textarea id="editor" class="editor"></textarea>
+    </div>
+    <div id="saved-code-panel">
+        <h3 id="history-panel-title">
+            Code History
+            <i id="history-toggle-icon" class="fas fa-chevron-down"></i>
+        </h3>
+        <div id="saved-code-list"></div>
+    </div>
+    </div>
+
+    <div class="output-container">
+        <div id="hints-panel">
+        <h2>Warnings</h2>
+        </div>
+        <div id="output-content">
+        <h2>Output</h2>
+        </div>
+    </div>
+</div>
+<div id="notification-area"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
+    <!-- Pyodide -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+
+<script>
+
+    var editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+        mode: "python",
+        theme: "material-darker",
+        lineNumbers: true,
+        indentUnit: 4,
+        matchBrackets: true,
+        autofocus: true,
+        extraKeys: {"Ctrl-Space": "autocomplete"},
+        autoSave: 500
+    });
+
+    const runButton = document.getElementById("run-button");
+    const hintsPanel = document.getElementById("hints-panel");
+    const outputContent = document.getElementById("output-content");
+    const toggleAllButton = document.getElementById("toggle-all");
+    const srcButton = document.getElementById("view-src");
+    const toggleHintsButton = document.getElementById("toggle-hints");
+    const toggleErrorsButton = document.getElementById("toggle-errors");
+    const nextIssueButton = document.getElementById("next-issue");
+    const languageSelect = document.getElementById("language-select");
+    const editorContainer = document.getElementById("editor-container");
+    const ideTitle = document.getElementById("ide-title");
+    const bokehContainer = document.querySelector('.bokeh-container');
+    const saveButton = document.getElementById('save-button');
+    const savedCodeList = document.getElementById('saved-code-list');
+    const toggleHistoryPanelButton = document.getElementById('toggle-history-panel');
+    const historyPanel = document.getElementById('saved-code-panel');
+    const historyPanelTitle = document.getElementById('history-panel-title');
+    const historyToggleIcon = document.getElementById('history-toggle-icon');
+    const notificationArea = document.getElementById('notification-area');
+
+    let currentIssueIndex = 0;
+    let issues = [];
+    let allMarks = [];
+    let pyodide;
+    let currentLanguage = 'python';
+    let bokehElements = [];
+    let codeCache = {
+        'python': `print("Hello, World!")`,
+        'java': `public class Main {\n  public static void main(String[] args) {\n    System.out.println("Hello, World!");\n  }\n}`,
+        'c': `#include <stdio.h>\n\nint main() {\n  printf("Hello, World!\\n");\n  return 0;\n}`,
+        'cpp': `#include <iostream>\n\nint main() {\n  std::cout << "Hello, World!" << std::endl;\n  return 0;\n}`
+    };
+    const languageColors = {
+        python: ['#4B8BBE', '#FFDA64', '#808080'],
+        java: ['#FFFFFF', '#f89820', '#5382a1'],
+        c: ['#ADD8E6', '#FFFFFF', '#007BFF'],
+        cpp: ['#0056B3', '#FFFFFF', '#ADD8E6'],
+    };
+    let isHistoryPanelVisible = localStorage.getItem('isCodeHistoryPanelVisible') !== 'false';
+    if(!localStorage.getItem('isCodeHistoryPanelVisible')){
+        localStorage.setItem('isCodeHistoryPanelVisible', 'true');
+    }
+
+
+    function getRandom(min, max) {
+    return Math.random() * (max - min) + min;
+    }
+
+
+    function createBokeh(language) {
+        const bokehCount = 128;
+        let styleString = "";
+        const colors = languageColors[language] || languageColors['python'];
+
+    for (let i = 0; i < bokehCount; i++) {
+        const bokeh = document.createElement("div");
+        bokeh.classList.add("bokeh-element");
+
+
+        const size = getRandom(32, 128);
+        const x = getRandom(0, 100);
+        const y = getRandom(0, 100);
+        const opacity = getRandom(0.1, 0.8);
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+
+        bokeh.style.width = `${size}px`;
+        bokeh.style.height = `${size}px`;
+        bokeh.style.left = `${x}%`;
+        bokeh.style.top = `${y}%`;
+        bokeh.style.opacity = opacity;
+        bokeh.initialOpacity = opacity;
+        bokeh.style.backgroundColor = color;
+        bokeh.style.filter = `blur(16px)`;
+
+        bokehContainer.appendChild(bokeh);
+        bokehElements.push(bokeh);
+
+
+        const animDuration = getRandom(8, 32);
+        const animX = getRandom(-360, 360);
+        const animY = getRandom(-360, 360);
+        const className = `bokeh-anim-${i}`;
+        bokeh.classList.add(className);
+
+        styleString += `
+        @keyframes ${className} {
+            from { transform: translate(0, 0); }
+            to { transform: translate(${animX}px, ${animY}px); }
+        }
+        .${className} {
+            animation: ${className} ${animDuration}s infinite alternate linear;
+        }
+        `;
+    }
+
+
+    let styleTag = document.getElementById('bokeh-styles');
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'bokeh-styles';
+            document.head.appendChild(styleTag);
+        }
+        styleTag.textContent = styleString;
+    }
+
+
+    function highlightLine(lineNumber, type) {
+        editor.eachLine(lineHandle => {
+        editor.removeLineClass(lineHandle, "wrap", "highlight-line");
+        editor.removeLineClass(lineHandle, "wrap", "highlight-line-blue");
+        editor.removeLineClass(lineHandle, "wrap", "highlight-line-red");
+        });
+        let className;
+        if(type == "hint"){
+            className = "highlight-line-blue";
+        } else {
+        className = "highlight-line-red";
+        }
+        editor.addLineClass(lineNumber - 1, "wrap", className);
+    }
+
+    function analyzeCode() {
+    hintsPanel.innerHTML = '<h2>Warnings</h2>';
+        allMarks.forEach(mark => mark.clear());
+        allMarks = [];
+    currentIssueIndex = 0;
+    issues = [];
+    let code = editor.getValue();
+    let lines = code.split("\n");
+
+    if (currentLanguage === 'python') {
+        // --- Python Specific Analysis ---
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const lineNumber = i + 1;
+
+            if (line.includes("/ 0")) {
+                const startIndex = line.indexOf("/ 0");
+                const mark = editor.markText(
+                    {line: i, ch: startIndex},
+                    {line: i, ch: startIndex + 3},
+                    {className: "cm-error-underline",
+                    attributes: { "data-line": lineNumber }}
+                );
+                allMarks.push(mark);
+                issues.push({ type: "warning", text: `Line ${lineNumber}: Division by zero.`, line: lineNumber });
+            } else if (line.includes("/0")) {
+                const startIndex = line.indexOf("/0");
+                const mark = editor.markText(
+                    {line: i, ch: startIndex},
+                    {line: i, ch: startIndex + 3},
+                    {className: "cm-error-underline",
+                    attributes: { "data-line": lineNumber }}
+                );
+                allMarks.push(mark);
+                issues.push({ type: "warning", text: `Line ${lineNumber}: Division by zero.`, line: lineNumber });
+            } else if (line.includes("=") && line.split("=").length -1 > 2){
+                const mark = editor.markText(
+                    {line: i, ch: 0},
+                    {line: i, ch: line.length},
+                    {className: "cm-error-underline",
+                        attributes: { "data-line": lineNumber }}
+                );
+                allMarks.push(mark);
+                issues.push({ type: "warning", text: `Line ${lineNumber}:  Invalid syntax, cannot reassign twice in one line.`, line: lineNumber });
+            } else if (line.includes(".val") && code.includes("self.value")) {
+                    const startIndex = line.indexOf(".val");
+                    const mark = editor.markText(
+                    { line: i, ch: startIndex },
+                    { line: i, ch: startIndex + 4 },
+                    {
+                        className: "cm-error-underline",
+                        attributes: { "data-line": lineNumber }
+                    }
+                    );
+                    allMarks.push(mark);
+                    issues.push({ type: "warning", text: `Line ${lineNumber}: Potential Typo. Did you mean to use a different variable?`, line: lineNumber});
+            }
+            if (line.includes("import") && !code.includes(line.split("import ")[1].split(" #")[0] + ".")) {
+                    const startIndex = line.indexOf("import");
+                    const endIndex = line.length;
+
+                    const mark =  editor.markText(
+                        { line: i, ch: startIndex },
+                        { line: i, ch: endIndex },
+                        { className: "cm-hint-underline",
+                        attributes: { "data-line": lineNumber } }
+
+                    );
+                    allMarks.push(mark);
+                    issues.push({ type: "hint", text: `Line ${lineNumber}: Import is never used.`, line: lineNumber });
+            } else if (line.includes("print") && false) {
+                const startIndex = line.indexOf("print");
+                const mark =  editor.markText(
+                    { line: i, ch: startIndex },
+                    { line: i, ch: startIndex + 5 },
+                    { className: "cm-hint-underline",
+                        attributes: { "data-line": lineNumber }}
+                );
+                allMarks.push(mark);
+                issues.push({ type: "hint", text: `Line ${lineNumber}: Consider using logging instead of print.`, line: lineNumber });
+            } else if (line.includes("import") && line.split("import").length > 2) {
+                    const startIndex = line.indexOf("import");
+                    const endIndex = line.length;
+
+                    const mark = editor.markText(
+                        { line: i, ch: startIndex },
+                        { line: i, ch: endIndex },
+                        { className: "cm-hint-underline",
+                        attributes: { "data-line": lineNumber }}
+                    );
+                    allMarks.push(mark);
+                issues.push({ type: "hint", text: `Line ${lineNumber}: Avoid multiple imports on one line.`, line: lineNumber });
+            } else if (line.startsWith("def ") && !code.includes(line.split("def ")[1].split("(")[0])) {
+                const startIndex = line.indexOf("def");
+                    const functionName = line.split("def ")[1].split("(")[0];
+                    const endIndex = startIndex + 4 + functionName.length;
+
+
+                const mark =  editor.markText(
+                        {line: i, ch: startIndex},
+                        {line: i, ch: endIndex},
+                        {className: "cm-hint-underline",
+                        attributes: { "data-line": lineNumber }}
+                    );
+                    allMarks.push(mark);
+                    issues.push({type: "hint", text: `Line ${lineNumber}: Unused function.`, line: lineNumber});
+            } else if (line.includes("break") && line.includes("for")) {
+                const startIndex = line.indexOf("break");
+                const mark = editor.markText(
+                        {line: i, ch: startIndex},
+                        {line: i, ch: startIndex + 5},
+                        {className: "cm-hint-underline",
+                        attributes: { "data-line": lineNumber }}
+                    );
+                    allMarks.push(mark);
+                issues.push({ type: "hint", text: `Line ${lineNumber}: Consider refactoring to avoid 'break' statement.`, line: lineNumber });
+            } else if(line.includes("self.") && line.split("self.")[1].includes("=") && line.split("self.")[1].split("=")[0].includes(" ")){
+                const startIndex = line.indexOf("self.");
+
+                const mark =  editor.markText(
+                        {line: i, ch: startIndex},
+                        {line: i, ch: line.length},
+                        {className: "cm-hint-underline",
+                        attributes: { "data-line": lineNumber }}
+                    );
+                    allMarks.push(mark);
+                    issues.push({type: "hint", text: `Line ${lineNumber}: Shadowing. Variable reassignment.`, line: lineNumber});
+            } else if (line.includes("/") && !line.includes(".") && !line.includes("/ 0")) {
+
+                const startIndex = line.indexOf("/");
+                const mark =  editor.markText(
+                        {line: i, ch: startIndex},
+                        {line: i, ch: startIndex+1},
+                        {className: "cm-hint-underline",
+                        attributes: { "data-line": lineNumber }}
+                    );
+                    allMarks.push(mark);
+                issues.push({ type: "hint", text: `Line ${lineNumber}: Integer division may cause loss of precision.`, line: lineNumber });
+            } else if(line.includes("else:") && lines[i-1].includes("break")){
+                const startIndex = line.indexOf("else:");
+                const mark =  editor.markText(
+                        {line: i, ch: startIndex},
+                        {line: i, ch: startIndex + 5},
+                        {className: "cm-hint-underline",
+                        attributes: { "data-line": lineNumber }}
+                    );
+                    allMarks.push(mark);
+                    issues.push({ type: "hint", text: `Line ${lineNumber}: Unreachable 'else' block after 'break' statement.`, line: lineNumber });
+            }
+        }
+    } else if (currentLanguage === 'java') {
+        console.log("Java code analysis not implemented yet.");
+        issues.push({ type: "hint", text: `Java code analysis is a placeholder.`, line: 1 });
+    } else if (currentLanguage === 'c') {
+        console.log("C code analysis not implemented yet.");
+        issues.push({ type: "hint", text: `C code analysis is a placeholder.`, line: 1 });
+    } else if (currentLanguage === 'cpp') {
+        console.log("C++ code analysis not implemented yet.");
+        issues.push({ type: "hint", text: `C code analysis is a placeholder.`, line: 1 });
+    }
+
+
+    issues.forEach(issue => {
+        const div = document.createElement("div");
+        div.className = issue.type === "hint" ? "hint-item" : "warning-item";
+        div.innerText = issue.text;
+        div.setAttribute("data-line", issue.line);
+
+        div.addEventListener("click", () => {
+            const lineNumber = parseInt(div.getAttribute("data-line"), 10);
+            editor.setCursor({ line: lineNumber - 1, ch: 0 });
+            highlightLine(lineNumber, issue.type);
+            editor.focus();
+        });
+        hintsPanel.appendChild(div);
+
+        div.addEventListener("mouseover", () => {
+        const line = div.getAttribute("data-line");
+        const underlineEl = document.querySelector(`.CodeMirror .cm-${issue.type ==="hint" ? "hint" : "error"}-underline[data-line="${line}"]`);
+        if(underlineEl){
+            underlineEl.classList.add(`${issue.type ==="hint" ? "hint" : "warning"}-item-hover`);
+        }
+        });
+
+        div.addEventListener("mouseout", () => {
+            const line = div.getAttribute("data-line");
+            const underlineEl = document.querySelector(`.CodeMirror .cm-${issue.type ==="hint" ? "hint" : "error"}-underline[data-line="${line}"]`);
+            if(underlineEl){
+            underlineEl.classList.remove(`${issue.type ==="hint" ? "hint" : "warning"}-item-hover`);
+            }
+        });
+    });
+    applyUnderlineVisibility();
+    applyHintsPanelVisibility();
+    }
+    
+    runButton.addEventListener("click", function() {
+        if (!runButton.disabled) {
+            runButton.disabled = true;
+            if (currentLanguage === 'python' && !runButton.disabled) {
+                runPythonCode().finally(() => {
+                    isRunButtonActive = true;
+                    runButton.disabled = false;
+                });
+            } else if (currentLanguage === 'java') {
+                runJavaCode();
+                runButton.disabled = false;
+            } else if (currentLanguage === 'c' || currentLanguage === 'cpp') {
+                runCCppCode();
+                runButton.disabled = false;
+            } else { 
+                console.warn("Nothing found...")
+            }
+        } else {
+            console.warn("Run button click ignored - already processing.");
+        }
+    });
+
+    saveButton.addEventListener('click', saveCode);
+    toggleHistoryPanelButton.addEventListener('click', toggleHistoryPanel);
+
+    srcButton.addEventListener("click", () => {
+        window.open("https://github.com/nuni-neomu-areumdawo/Online-IDE/");
+    });
+
+
+    toggleAllButton.addEventListener("click", () => {
+        const idePanel = document.querySelector(".ide-panel");
+        const hintsPanelEl = document.querySelector("#hints-panel");
+        const allHidden = !idePanel.classList.contains("show-hints") && !idePanel.classList.contains("show-errors");
+
+        if (allHidden) {
+            idePanel.classList.add("show-hints", "show-errors");
+            hintsPanelEl.classList.remove("hide-hints", "hide-warnings");
+            localStorage.setItem("showHints", "true");
+            localStorage.setItem("showErrors", "true");
+        } else {
+            const showing = idePanel.classList.contains("show-hints") || idePanel.classList.contains("show-errors");
+            idePanel.classList.toggle("show-hints", !showing);
+            idePanel.classList.toggle("show-errors", !showing);
+            hintsPanelEl.classList.toggle("hide-hints", showing);
+            hintsPanelEl.classList.toggle("hide-warnings", showing);
+            localStorage.setItem("showHints", !showing);
+            localStorage.setItem("showErrors", !showing);
+        }
+    });
+
+    toggleHintsButton.addEventListener("click", () => {
+        const idePanel = document.querySelector(".ide-panel");
+        const hintsPanelEl = document.querySelector("#hints-panel");
+        idePanel.classList.toggle("show-hints");
+        hintsPanelEl.classList.toggle("hide-hints");
+        const showHints = idePanel.classList.contains("show-hints");
+        localStorage.setItem("showHints", showHints);
+
+    });
+
+    toggleErrorsButton.addEventListener("click", () => {
+    const idePanel = document.querySelector(".ide-panel");
+        const hintsPanelEl = document.querySelector("#hints-panel");
+        idePanel.classList.toggle("show-errors");
+        hintsPanelEl.classList.toggle("hide-warnings");
+        const showErrors = idePanel.classList.contains("show-errors");
+        localStorage.setItem("showErrors", showErrors);
+    });
+
+    nextIssueButton.addEventListener("click", () => {
+    if (issues.length === 0) return;
+
+    currentIssueIndex = (currentIssueIndex + 1) % issues.length;
+    const nextIssue = issues[currentIssueIndex];
+    editor.setCursor({ line: nextIssue.line - 1, ch: 0 });
+    highlightLine(nextIssue.line, nextIssue.type);
+    editor.focus();
+        const issueElement = document.querySelector(`.hint-item[data-line="${nextIssue.line}"], .warning-item[data-line="${nextIssue.line}"]`);
+        if (issueElement) {
+            issueElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    });
+
+
+    function applyUnderlineVisibility() {
+        const idePanel = document.querySelector(".ide-panel");
+        const showHints = localStorage.getItem("showHints") !== "false";
+        const showErrors = localStorage.getItem("showErrors") !== "false";
+        idePanel.classList.toggle("show-hints", showHints);
+        idePanel.classList.toggle("show-errors", showErrors);
+    }
+    function applyHintsPanelVisibility() {
+        const hintsPanelEl = document.querySelector("#hints-panel");
+        const showHints = localStorage.getItem("showHints") !== "false";
+        const showErrors = localStorage.getItem("showErrors") !== "false";
+        hintsPanelEl.classList.toggle("hide-hints", !showHints);
+        hintsPanelEl.classList.toggle("hide-warnings", !showErrors);
+    }
+
+
+    async function runPythonCode() {
+        outputContent.innerHTML = '<h2>Output</h2>';
+
+        triggerRunAnimation();
+        let capturedOutput = "";
+
+        if (!pyodide) {
+            outputContent.innerHTML = "<h2>Output</h2><p>Loading Pyodide...</p>";
+            pyodide = await loadPyodide();
+
+            pyodide.registerJsModule("jsModule", {
+                consoleLog : (text) => {
+                    console.log("consoleLog called:", text);
+                    const outputParagraph = document.createElement('p');
+                    outputParagraph.textContent = text;
+                    capturedOutput += text;
+                    outputContent.appendChild(outputParagraph);
+                }
+            });
+
+            await pyodide.runPythonAsync(`
+                import jsModule
+                import sys
+                import time
+                from io import StringIO
+
+                def forward_output(print_func):
+                    def wrapped_print(*args, **kwargs):
+                        io_stream = StringIO()
+                        print(*args, **kwargs, file=io_stream)
+                        print_func(io_stream.getvalue())
+
+                    return wrapped_print
+
+                sys.stdout.write = forward_output(jsModule.consoleLog)
+                sys.stderr.write = forward_output(jsModule.consoleLog)
+            `);
+        }
+        outputContent.innerHTML = "<h2>Output:</p>";
+        const code = editor.getValue();
+
+        let startTime, endTime;
+        startTime = performance.now();
+
+
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Execution timed out after 5 seconds')), 5000)
+        );
+
+        const runCodePromise = pyodide.runPythonAsync(code);
+
+        Promise.race([runCodePromise, timeoutPromise])
+            .then(() => {
+                endTime = performance.now();
+                const runtime = (endTime - startTime).toFixed(2);
+                const memoryUsage = (Math.random() * 100 + 50).toFixed(2);
+
+                outputContent.innerHTML += `
+                    <p><b>Runtime:</b> ${runtime} ms</p>
+                    <p><b>Memory:</b> ${memoryUsage} MB (Mock)</p>
+                `;
+                console.log("Code execution finished, output displayed:", capturedOutput);
+                showNotification('Code executed successfully!', 'success');
+
+            })
+            .catch(error => {
+
+                endTime = performance.now();
+                const runtime = (endTime - startTime).toFixed(2);
+                outputContent.innerHTML = `<h2>Output</h2><p style="color: red;"><b>Error:</b> ${error.message}</p>`;
+                outputContent.innerHTML += `
+                    <p style="color: grey;">Runtime (Timeout): ${runtime} ms</p>
+                    <p style="color: grey;">Memory: N/A (Mock)</p>
+                `;
+                console.error("Code execution error:", error);
+                showNotification(`Execution error: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                console.log("runPythonCode finally block executed");
+                runButton.disabled = false;
+            });
+            console.log("runPythonCode function ending");
+    }
+
+
+    function runJavaCode() {
+        triggerRunAnimation();
+        outputContent.innerHTML = "<h2>Output</h2><p style='color: orange;'>Java execution is a placeholder. Real execution would happen server-side.</p>";
+        showNotification('Java execution is a placeholder.', 'info');
+    }
+
+    function runCCppCode() {
+        triggerRunAnimation();
+        outputContent.innerHTML = "<h2>Output</h2><p style='color: orange;'>C/C++ execution is a placeholder. Real execution would happen server-side.</p>";
+        showNotification('C/C++ execution is a placeholder.', 'info');
+    }
+
+    function triggerRunAnimation() {
+        bokehElements.forEach(bokeh => {
+            const velocity = getRandom(200, 350);
+            const angle = Math.random() * 2 * Math.PI;
+            const directionX = Math.cos(angle);
+            const directionY = Math.sin(angle);
+            const brightness = getRandom(1.6, 2.0);
+
+            bokeh.style.transitionDuration = '0.15s';
+            bokeh.style.transform = `translate(${directionX * velocity}px, ${directionY * velocity}px) scale(1.6)`;
+            bokeh.style.opacity = brightness;
+
+            setTimeout(() => {
+                bokeh.style.transitionDuration = '0.7s';
+                bokeh.style.transform = 'translate(0, 0) scale(1)';
+                bokeh.style.opacity = bokeh.initialOpacity;
+            }, 150);
+        });
+    }
+
+
+    function switchLanguage(newLanguage) {
+
+    if (currentLanguage) {
+        codeCache[currentLanguage] = editor.getValue();
+    }
+
+        editorContainer.classList.add('editor-fade-out-animation');
+
+
+        let fadeOutStyleString = "";
+        bokehElements.forEach((bokeh, index) => {
+            const className = `bokeh-fade-out-${index}`;
+            bokeh.classList.add(className);
+        const fadeOutAnimX = getRandom(-500, 500);
+        const fadeOutAnimY = getRandom(-500, 500);
+        fadeOutStyleString += `
+            @keyframes ${className} {
+                from { transform: translate(0, 0); opacity: ${bokeh.style.opacity}; }
+                to { transform: translate(${fadeOutAnimX}px, ${fadeOutAnimY}px); opacity: 0; }
+            }
+            .${className} {
+                animation: ${className} 0.5s forwards;
+            }
+        `;
+        });
+        let fadeOutStyleTag = document.getElementById('bokeh-fade-styles');
+        if (!fadeOutStyleTag) {
+            fadeOutStyleTag = document.createElement('style');
+            fadeOutStyleTag.id = 'bokeh-fade-styles';
+            document.head.appendChild(fadeOutStyleTag);
+        }
+    fadeOutStyleTag.textContent = fadeOutStyleString;
+
+        setTimeout(() => {
+            bokehElements.forEach(bokeh => {
+                bokeh.remove();
+            });
+            bokehElements = [];
+        document.getElementById('bokeh-styles').textContent = "";
+            if (document.getElementById('bokeh-fade-styles')) {
+                document.getElementById('bokeh-fade-styles').textContent = "";
+            }
+
+
+        let newMode, defaultValue, ideTitleText;
+            if (newLanguage === 'python') {
+                newMode = 'python';
+                defaultValue = codeCache['python'];
+                runButton.onclick = runPythonCode;
+                ideTitleText = 'Python IDE';
+            } else if (newLanguage === 'java') {
+                newMode = 'clike';
+                defaultValue = codeCache['java'];
+                runButton.onclick = runJavaCode;
+                ideTitleText = 'Java IDE';
+            } else if (newLanguage === 'c') {
+                newMode = 'clike';
+                defaultValue = codeCache['c'];
+                runButton.onclick = runCCppCode;
+                ideTitleText = 'C IDE';
+            } else if (newLanguage === 'cpp') {
+                newMode = 'clike';
+                defaultValue = codeCache['cpp'];
+                runButton.onclick = runCCppCode;
+                ideTitleText = 'C++ IDE';
+            }
+
+            editor.setValue(defaultValue);
+            editor.setOption('mode', newMode);
+            currentLanguage = newLanguage;
+
+            createBokeh(currentLanguage);
+            analyzeCode();
+            ideTitle.textContent = ideTitleText;
+
+            editorContainer.classList.remove('editor-fade-out-animation');
+            editorContainer.classList.add('editor-fade-in');
+
+            setTimeout(() => {
+                editorContainer.classList.remove('editor-fade-in');
+                editorContainer.classList.add('editor-no-glow');
+                setTimeout(() => {
+                    editorContainer.classList.remove('editor-no-glow');
+                }, 1000);
+            }, 500);
+
+        }, 550);
+    }
+
+    languageSelect.addEventListener('change', (event) => {
+        switchLanguage(event.target.value);
+    });
+
+
+
+    function saveCode() {
+        const codeToSave = editor.getValue();
+        const timestamp = new Date().toISOString();
+        const language = currentLanguage;
+
+
+        let savedCodeIterations = JSON.parse(localStorage.getItem('ideCodeSaves')) || [];
+
+
+
+        const newSave = {
+            timestamp: timestamp,
+            code: codeToSave,
+            language: language,
+            name: `Saved ${new Date().toLocaleString()}`
+        };
+
+        savedCodeIterations.push(newSave);
+
+
+        updateLatestSave(codeToSave, language);
+
+
+        localStorage.setItem('ideCodeSaves', JSON.stringify(savedCodeIterations));
+
+        displaySavedCodeIterations();
+
+        showNotification('Code saved!', 'success');
+    }
+
+    function autosaveCode() {
+        const codeToSave = editor.getValue();
+        const language = currentLanguage;
+        updateLatestSave(codeToSave, language);
+    }
+
+    function updateLatestSave(codeToSave, language) {
+        let savedCodeIterations = JSON.parse(localStorage.getItem('ideCodeSaves')) || [];
+        const latestIndex = savedCodeIterations.findIndex(save => save.name === 'Latest');
+
+        const latestSave = {
+            timestamp: new Date().toISOString(),
+            code: codeToSave,
+            language: language,
+            name: 'Latest'
+        };
+
+        if (latestIndex !== -1) {
+            savedCodeIterations[latestIndex] = latestSave;
+        } else {
+            savedCodeIterations.push(latestSave);
+        }
+        localStorage.setItem('ideCodeSaves', JSON.stringify(savedCodeIterations));
+    }
+
+
+    function loadSavedCode(timestamp, name) {
+        if (confirm('Are you sure you want to load this saved version? Current code will be replaced.')) {
+            const savedCodeIterations = JSON.parse(localStorage.getItem('ideCodeSaves')) || [];
+            const savedVersion = savedCodeIterations.find(save => save.timestamp === timestamp);
+
+            if (savedVersion) {
+                const newCode = savedVersion.code;
+                if (savedVersion.language && savedVersion.language !== currentLanguage) {
+                    switchLanguage(savedVersion.language);
+                    languageSelect.value = savedVersion.language;
+                }
+                animateCodeFadeIn(newCode);
+                showNotification('Code version loaded.', 'info');
+            } else if(false) {
+                //logic to load laatest code
+            } else {
+                showNotification('Code version not found.', 'warning');
+            }
+        }
+    }
+
+    function animateCodeFadeIn(newCode) {
+        editorContainer.classList.add('editor-fade-out-animation');
+
+        setTimeout(() => {
+            editor.setValue(newCode);
+            editorContainer.classList.remove('editor-fade-out-animation');
+            editorContainer.classList.add('editor-fade-in');
+
+            setTimeout(() => {
+                editorContainer.classList.remove('editor-fade-in');
+                editorContainer.classList.add('editor-no-glow');
+                setTimeout(() => {
+                    editorContainer.classList.remove('editor-no-glow');
+                }, 1000);
+            }, 500);
+
+        }, 500);
+    }
+
+
+    function renameSavedCode(timestamp) {
+        const savedCodeIterations = JSON.parse(localStorage.getItem('ideCodeSaves')) || [];
+        const saveIndex = savedCodeIterations.findIndex(save => save.timestamp === timestamp);
+
+        if (saveIndex !== -1) {
+            const currentName = savedCodeIterations[saveIndex].name;
+            const newName = prompt("Enter new name for saved code:", currentName);
+            if (newName !== null && newName.trim() !== "") {
+                savedCodeIterations[saveIndex].name = newName.trim();
+                localStorage.setItem('ideCodeSaves', JSON.stringify(savedCodeIterations));
+                displaySavedCodeIterations();
+                showNotification('Code version renamed.', 'success');
+            }
+        }
+    }
+
+    function deleteSavedCode(timestamp) {
+        const savedCodeIterations = JSON.parse(localStorage.getItem('ideCodeSaves')) || [];
+        const updatedSaves = savedCodeIterations.filter(save => save.timestamp !== timestamp);
+        localStorage.setItem('ideCodeSaves', JSON.stringify(updatedSaves));
+        displaySavedCodeIterations();
+        showNotification('Code version deleted.', 'info');
+    }
+
+
+    function displaySavedCodeIterations() {
+        savedCodeList.innerHTML = '';
+        const savedCodeIterations = JSON.parse(localStorage.getItem('ideCodeSaves')) || [];
+
+
+        savedCodeIterations.sort((a, b) => {
+            if (a.name === 'Latest') return -1;
+            if (b.name === 'Latest') return 1;
+            return new Date(b.timestamp) - new Date(a.timestamp);
+        });
+
+
+        if (savedCodeIterations.length === 0) {
+            savedCodeList.innerHTML = '<p>No saved versions yet.</p>';
+            toggleHistoryPanelButton.disabled = true;
+            return;
+        }
+
+        toggleHistoryPanelButton.disabled = false;
+
+        savedCodeIterations.forEach(save => {
+            const iterationDiv = document.createElement('div');
+            iterationDiv.className = 'saved-code-iteration';
+
+            const displayText = `${save.name} (${save.language})`;
+
+            iterationDiv.textContent = displayText;
+
+            const actionIcons = document.createElement('div');
+
+            if (save.name !== 'Latest') {
+                const renameDotsSpan = document.createElement('span');
+                renameDotsSpan.className = 'rename-dots';
+                renameDotsSpan.innerHTML = '<i class="fas fa-ellipsis-h"></i>';
+                renameDotsSpan.title = 'Rename this saved version';
+                renameDotsSpan.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    renameSavedCode(save.timestamp);
+                });
+                actionIcons.appendChild(renameDotsSpan);
+
+
+                const deleteIconSpan = document.createElement('span');
+                deleteIconSpan.className = 'delete-icon';
+                deleteIconSpan.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteIconSpan.title = 'Delete this saved version';
+                deleteIconSpan.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    deleteSavedCode(save.timestamp);
+                });
+                actionIcons.appendChild(deleteIconSpan);
+            }
+
+
+            iterationDiv.appendChild(actionIcons);
+            iterationDiv.title = `Click to restore this code version`;
+            iterationDiv.addEventListener('click', () => loadSavedCode(save.timestamp, save.name));
+
+
+            savedCodeList.appendChild(iterationDiv);
+        });
+        updateHistoryPanelVisibility();
+    }
+
+    function toggleHistoryPanel() {
+        isHistoryPanelVisible = !isHistoryPanelVisible;
+        localStorage.setItem('isCodeHistoryPanelVisible', String(isHistoryPanelVisible));
+        updateHistoryPanelVisibility();
+    }
+
+    function updateHistoryPanelVisibility() {
+        if (isHistoryPanelVisible) {
+            historyPanel.classList.remove('hide-panel');
+            historyToggleIcon.classList.remove('fa-chevron-right');
+            historyToggleIcon.classList.add('fa-chevron-down');
+        } else {
+            historyPanel.classList.add('hide-panel');
+            historyToggleIcon.classList.remove('fa-chevron-down');
+            historyToggleIcon.classList.add('fa-chevron-right');
+        }
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.classList.add('show');
+        notification.textContent = message;
+        notificationArea.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.remove('show');
+            notification.addEventListener('transitionend', () => {
+                notification.remove();
+            }, { once: true });
+        }, 3000);
+    }
+
+    editor.setValue(codeCache[currentLanguage])
+
+    createBokeh('python');
+    analyzeCode();
+    editor.on("change", analyzeCode);
+    editor.on("change", autosaveCode);
+    runButton.disabled = false;
+    switchLanguage('python');
+    displaySavedCodeIterations();
+    updateHistoryPanelVisibility();
+    autosaveCode();
+    historyPanelTitle.addEventListener('click', toggleHistoryPanel);
+
+</script>
+</body>
+</html>
