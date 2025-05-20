@@ -4,7 +4,7 @@
 
 A web-based Integrated Development Environment built with HTML, CSS, and JavaScript that allows you to write and execute code directly in your browser.
 
-<img width="1278" alt="image" src="https://github.com/user-attachments/assets/782c8799-b300-46ec-9a42-832a6f6df35a" />
+<img width="1278" alt="439380756-782c8799-b300-46ec-9a42-832a6f6df35a" src="https://github.com/user-attachments/assets/5d1ce12a-98e7-4929-a262-a08871e54bed" />
 
 *Example execution with simple program.*
 
